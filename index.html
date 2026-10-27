@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>一気通貫 取引書類作成ツール</title>
+  <style>
+    /* 全体レイアウト */
+    body {
+      font-family: sans-serif;
+      background-color: #f8f9fa;
+      margin: 0;
+      padding: 15px;
+      color: #333;
+    }
+    .app-header {
+      max-width: 1400px;
+      margin: 0 auto 15px auto;
+      background: #2ecc71; /* 明るい緑 */
+      color: #fff;
+      padding: 15px 20px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      box-shadow: 0 2px 8px rgba(46, 204, 113, 0.2);
+    }
+    .app-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin: 0;
+    }
+    .app-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+
+    /* 左側：入力パネル */
+    .editor-panel {
+      width: 450px;
+      flex-shrink: 0;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      box-sizing: border-box;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .section-title {
+      font-size: 15px;
+      font-weight: bold;
+      border-bottom: 2px solid #2ecc71; /* 明るい緑 */
+      padding-bottom: 5px;
+      margin-top: 15px;
+      margin-bottom: 10px;
+      color: #2ecc71; /* 明るい緑 */
+    }
+    .form-group {
+      margin-bottom: 10px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: bold;
+      margin-bottom: 3px;
+      color: #555;
+    }
+    .form-group input, .form-group textarea, .form-group select {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 13px;
+      box-sizing: border-box;
+    }
+    .form-group input:focus, .form-group textarea:focus {
+      border-color: #2ecc71;
+      outline: none;
+    }
+    .form-row {
+      display: flex;
+      gap: 10px;
+    }
+    .form-row .form-group {
+      flex: 1;
+    }
+
+    /* 明細入力用テーブル */
+    .item-input-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 8px;
+    }
+    .item-input-table th, .item-input-table td {
+      border: 1px solid #ddd;
+      padding: 4px;
+    }
+    .item-input-table input {
+      width: 100%;
+      border: none;
+      padding: 4px;
+      box-sizing: border-box;
+      font-size: 12px;
+    }
+
+    /* 右側：プレビューパネル */
+    .preview-panel {
+      flex-grow: 1;
+      background: #fff;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      box-sizing: border-box;
+    }
+
+    /* タブ・操作ボタンコンテナ */
+    .toolbar {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 15px;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      padding: 6px 12px;
+      background: #a3e4d7; /* 黄緑 / パステルミント（未選択時） */
+      color: #2c3e50;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 13px;
+    }
+    .tab-btn.active {
+      background: #2ecc71; /* 明るい緑（選択時） */
+      color: #fff;
+    }
+    .action-btn {
+      padding: 6px 14px;
+      background: #f39c12; /* SAVE, LOAD用オレンジ */
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 13px;
+    }
+    .action-btn.print-btn {
+      background: #e74c3c; /* PRINT用赤 */
+    }
+    .action-btn.add { background: #2ecc71; color: #fff; margin-top: 5px; }
+    .action-btn.remove { background: #e74c3c; color: #fff; padding: 2px 6px; font-size: 11px; }
+
+    /* プレビュー用紙部分 */
+    .document-sheet {
+      border: 1px solid #ddd;
+      padding: 40px;
+      background: #fff;
+      box-sizing: border-box;
+      border-radius: 4px;
+    }
+
+    /* アライメント指定 */
+    .doc-title {
+      text-align: center;
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    .doc-meta {
+      text-align: right;
+      line-height: 1.6;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+    .info-section {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .info-box {
+      width: 48%;
+    }
+
+    /* プレビュー用テーブル */
+    .preview-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      margin-bottom: 15px;
+    }
+    .preview-table th, .preview-table td {
+      border: 1px solid #ccc;
+      padding: 8px 12px;
+      text-align: left;
+      font-size: 14px;
+    }
+    .preview-table th {
+      background: #f1f8f5;
+      color: #2ecc71;
+    }
+    .text-right {
+      text-align: right;
+    }
+
+    /* 印刷用設定 */
+    @media print {
+      body { background: none; padding: 0; }
+      .app-header, .editor-panel, .toolbar, .no-print { display: none; }
+      .app-container { display: block; max-width: 100%; }
+      .preview-panel { box-shadow: none; padding: 0; }
+      .document-sheet { border: none; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-header no-print">
+  <div class="app-title">一気通貫 取引書類作成ツール</div>
+  <div>
+    <button class="action-btn" onclick="app.saveDataFile()">SAVE</button>
+    <button class="action-btn" onclick="document.getElementById('fileLoader').click()">LOAD</button>
+    <input type="file" id="fileLoader" style="display:none" accept=".json" onchange="app.loadDataFile(event)">
+    <button class="action-btn print-btn" onclick="window.print()">PRINT</button>
+  </div>
+</div>
+
+<div class="app-container">
+  <!-- 左側：入力フォーム -->
+  <div class="editor-panel no-print">
+    <div class="section-title" style="margin-top:0;">1. お客様情報</div>
+    <div class="form-group">
+      <label>お客様名 (buyerName)</label>
+      <input type="text" id="input_buyerName" oninput="app.updateFromForm()">
+    </div>
+    <div class="form-group">
+      <label>お客様Mail (buyerMail)</label>
+      <input type="text" id="input_buyerMail" oninput="app.updateFromForm()">
+    </div>
+
+    <div class="section-title">2. 自社情報</div>
+    <div class="form-group">
+      <label>自社名/氏名 (sellerName)</label>
+      <input type="text" id="input_sellerName" oninput="app.updateFromForm()">
+    </div>
+    <div class="form-group">
+      <label>住所 (sellerAddress)</label>
+      <input type="text" id="input_sellerAddress" oninput="app.updateFromForm()">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>TEL (sellerTel)</label>
+        <input type="text" id="input_sellerTel" oninput="app.updateFromForm()">
+      </div>
+      <div class="form-group">
+        <label>Mail (sellerMail)</label>
+        <input type="text" id="input_sellerMail" oninput="app.updateFromForm()">
+      </div>
+    </div>
+
+    <div class="section-title">3. お支払い・振込先情報</div>
+    <div class="form-group">
+      <label>銀行名 / 支店名</label>
+      <input type="text" id="input_bankName" oninput="app.updateFromForm()">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>記号・番号 (ゆうちょ等)</label>
+        <input type="text" id="input_bankSymbolNumber" oninput="app.updateFromForm()">
+      </div>
+      <div class="form-group">
+        <label>口座種別 (普通/当座等)</label>
+        <input type="text" id="input_bankType" oninput="app.updateFromForm()">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>支店番号 / 番号</label>
+        <input type="text" id="input_bankBranchNumber" oninput="app.updateFromForm()">
+      </div>
+      <div class="form-group">
+        <label>口座番号</label>
+        <input type="text" id="input_bankAccountNumber" oninput="app.updateFromForm()">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>口座名義</label>
+      <input type="text" id="input_bankAccountName" oninput="app.updateFromForm()">
+    </div>
+
+    <div class="section-title">4. 各種日付</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>見積日</label>
+        <input type="text" id="input_date_quotation" oninput="app.updateFromForm()">
+      </div>
+      <div class="form-group">
+        <label>注文日</label>
+        <input type="text" id="input_date_order" oninput="app.updateFromForm()">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>請書発行日</label>
+        <input type="text" id="input_date_acknowledgment" oninput="app.updateFromForm()">
+      </div>
+      <div class="form-group">
+        <label>納品日</label>
+        <input type="text" id="input_date_delivery" oninput="app.updateFromForm()">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>請求日</label>
+        <input type="text" id="input_date_invoice" oninput="app.updateFromForm()">
+      </div>
+      <div class="form-group">
+        <label>領収/入金日</label>
+        <input type="text" id="input_date_receipt" oninput="app.updateFromForm()">
+      </div>
+    </div>
+
+    <div class="section-title">5. 各種番号 (No.)</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>見積No</label>
+        <input type="text" id="input_no_quotation" oninput="app.updateFromForm()">
+      </div>
+      <div class="form-group">
+        <label>注文No</label>
+        <input type="text" id="input_no_order" oninput="app.updateFromForm()">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>請書No</label>
+        <input type="text" id="input_no_acknowledgment" oninput="app.updateFromForm()">
+      </div>
+      <div class="form-group">
+        <label>納品No</label>
+        <input type="text" id="input_no_delivery" oninput="app.updateFromForm()">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>請求No</label>
+        <input type="text" id="input_no_invoice" oninput="app.updateFromForm()">
+      </div>
+      <div class="form-group">
+        <label>領収No</label>
+        <input type="text" id="input_no_receipt" oninput="app.updateFromForm()">
+      </div>
+    </div>
+
+    <div class="section-title">6. 明細項目</div>
+    <table class="item-input-table">
+      <thead>
+        <tr>
+          <th>品名</th>
+          <th style="width: 45px;">数量</th>
+          <th style="width: 45px;">単位</th>
+          <th style="width: 65px;">単価</th>
+          <th style="width: 30px;"></th>
+        </tr>
+      </thead>
+      <tbody id="itemFormContainer"></tbody>
+    </table>
+    <button class="action-btn add" onclick="app.addItemRow()">+ 明細を追加</button>
+  </div>
+
+  <!-- 右側：プレビューパネル -->
+  <div class="preview-panel">
+    <!-- タブ切り替えボタン -->
+    <div class="toolbar no-print">
+      <button class="tab-btn active" onclick="app.switchTab('quotation', event)">1. 見積書 (Quotation)</button>
+      <button class="tab-btn" onclick="app.switchTab('order', event)">2. 注文書</button>
+      <button class="tab-btn" onclick="app.switchTab('acknowledgment', event)">3. 請書</button>
+      <button class="tab-btn" onclick="app.switchTab('delivery', event)">4. 納品書</button>
+      <button class="tab-btn" onclick="app.switchTab('invoice', event)">5. 請求書</button>
+      <button class="tab-btn" onclick="app.switchTab('receipt', event)">6. 領収書</button>
+    </div>
+
+    <!-- プレビュー用紙 -->
+    <div id="documentPreview" class="document-sheet"></div>
+  </div>
+</div>
+
+<script>
+  // オブジェクト指向による取引書類マネージャー
+  class TransactionDocumentManager {
+    constructor() {
+      this.currentTab = 'quotation';
+      this.data = this.getDefaultData();
+    }
+
+    // デフォルトデータの取得
+    getDefaultData() {
+      return {
+        buyerName: "〇〇株式会社 取引先ご担当者様",
+        buyerMail: "client@example.com",
+        sellerName: "戸頭元老院 / 大河流清",
+        sellerAddress: "茨城県取手市戸頭",
+        sellerTel: "09000000000",
+        sellerMail: "taiga@example.com",
+        bank: {
+          bankName: "〇〇銀行 取手支店",
+          symbolNumber: "",
+          bankType: "普通",
+          branchNumber: "",
+          accountNumber: "1234567",
+          accountName: "オガワ アキヒロ"
+        },
+        dates: {
+          quotation: "2026-10-25 Sun",
+          order: "2026-10-27 Tue",
+          acknowledgment: "2026-10-28 Wed",
+          delivery: "2026-11-02 Mon",
+          invoice: "2026-11-02 Mon",
+          receipt: "2026-11-05 Thu"
+        },
+        numbers: {
+          quotationNo: "QUO-202610-001",
+          orderNo: "ORD-202610-005",
+          acknowledgmentNo: "ACK-202610-005",
+          deliveryNo: "DEL-202610-012",
+          invoiceNo: "INV-202610-012",
+          receiptNo: "REC-202610-012"
+        },
+        items: [
+          { name: "Webデザイン制作費", qty: 1, unit: "式", price: 50000 },
+          { name: "アイコンイラスト作成", qty: 3, unit: "点", price: 10000 }
+        ]
+      };
+    }
+
+    // JSONファイルを名前を付けて保存（ダウンロード）
+    saveDataFile() {
+      let defaultFileName = "transaction_data.json";
+      let fileName = prompt("保存するファイル名を入力してください:", defaultFileName);
+      if (!fileName) { return; }
+      if (!fileName.endsWith(".json")) {
+        fileName += ".json";
+      }
+
+      let jsonString = JSON.stringify(this.data, null, 2);
+      let blob = new Blob([jsonString], { type: "application/json" });
+      let url = URL.createObjectURL(blob);
+      let a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // JSONファイルを読み込む
+    loadDataFile(event) {
+      let file = event.target.files[0];
+      if (!file) { return; }
+      let reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          this.data = JSON.parse(e.target.result);
+          this.syncFormFromData();
+          this.render();
+          alert("JSONファイルを正常に読み込みました！");
+        } catch (err) {
+          alert("JSONの読み込みに失敗しました。正しいファイルを選択してください。");
+        }
+        event.target.value = ''; // ファイル選択をリセット
+      };
+      reader.readAsText(file);
+    }
+
+    // フォームの入力値をオブジェクトへ反映
+    updateFromForm() {
+      this.data.buyerName = document.getElementById('input_buyerName').value;
+      this.data.buyerMail = document.getElementById('input_buyerMail').value;
+      this.data.sellerName = document.getElementById('input_sellerName').value;
+      this.data.sellerAddress = document.getElementById('input_sellerAddress').value;
+      this.data.sellerTel = document.getElementById('input_sellerTel').value;
+      this.data.sellerMail = document.getElementById('input_sellerMail').value;
+
+      if (!this.data.bank) { this.data.bank = {}; }
+      this.data.bank.bankName = document.getElementById('input_bankName').value;
+      this.data.bank.symbolNumber = document.getElementById('input_bankSymbolNumber').value;
+      this.data.bank.bankType = document.getElementById('input_bankType').value;
+      this.data.bank.branchNumber = document.getElementById('input_bankBranchNumber').value;
+      this.data.bank.accountNumber = document.getElementById('input_bankAccountNumber').value;
+      this.data.bank.accountName = document.getElementById('input_bankAccountName').value;
+
+      this.data.dates.quotation = document.getElementById('input_date_quotation').value;
+      this.data.dates.order = document.getElementById('input_date_order').value;
+      this.data.dates.acknowledgment = document.getElementById('input_date_acknowledgment').value;
+      this.data.dates.delivery = document.getElementById('input_date_delivery').value;
+      this.data.dates.invoice = document.getElementById('input_date_invoice').value;
+      this.data.dates.receipt = document.getElementById('input_date_receipt').value;
+
+      this.data.numbers.quotationNo = document.getElementById('input_no_quotation').value;
+      this.data.numbers.orderNo = document.getElementById('input_no_order').value;
+      this.data.numbers.acknowledgmentNo = document.getElementById('input_no_acknowledgment').value;
+      this.data.numbers.deliveryNo = document.getElementById('input_no_delivery').value;
+      this.data.numbers.invoiceNo = document.getElementById('input_no_invoice').value;
+      this.data.numbers.receiptNo = document.getElementById('input_no_receipt').value;
+
+      // 明細行の読み取り
+      let nameInputs = document.querySelectorAll('.item-name');
+      let qtyInputs = document.querySelectorAll('.item-qty');
+      let unitInputs = document.querySelectorAll('.item-unit');
+      let priceInputs = document.querySelectorAll('.item-price');
+
+      let newItems = [];
+      for (let i = 0; i < nameInputs.length; i++) {
+        newItems.push({
+          name: nameInputs[i].value,
+          qty: Number(qtyInputs[i].value) || 0,
+          unit: unitInputs[i].value,
+          price: Number(priceInputs[i].value) || 0
+        });
+      }
+      this.data.items = newItems;
+
+      this.render();
+    }
+
+    // オブジェクトの値をフォームへ同期設定
+    syncFormFromData() {
+      document.getElementById('input_buyerName').value = this.data.buyerName || '';
+      document.getElementById('input_buyerMail').value = this.data.buyerMail || '';
+      document.getElementById('input_sellerName').value = this.data.sellerName || '';
+      document.getElementById('input_sellerAddress').value = this.data.sellerAddress || '';
+      document.getElementById('input_sellerTel').value = this.data.sellerTel || '';
+      document.getElementById('input_sellerMail').value = this.data.sellerMail || '';
+
+      let bank = this.data.bank || {};
+      document.getElementById('input_bankName').value = bank.bankName || '';
+      document.getElementById('input_bankSymbolNumber').value = bank.symbolNumber || '';
+      document.getElementById('input_bankType').value = bank.bankType || '';
+      document.getElementById('input_bankBranchNumber').value = bank.branchNumber || '';
+      document.getElementById('input_bankAccountNumber').value = bank.accountNumber || '';
+      document.getElementById('input_bankAccountName').value = bank.accountName || '';
+
+      document.getElementById('input_date_quotation').value = this.data.dates.quotation || '';
+      document.getElementById('input_date_order').value = this.data.dates.order || '';
+      document.getElementById('input_date_acknowledgment').value = this.data.dates.acknowledgment || '';
+      document.getElementById('input_date_delivery').value = this.data.dates.delivery || '';
+      document.getElementById('input_date_invoice').value = this.data.dates.invoice || '';
+      document.getElementById('input_date_receipt').value = this.data.dates.receipt || '';
+
+      document.getElementById('input_no_quotation').value = this.data.numbers.quotationNo || '';
+      document.getElementById('input_no_order').value = this.data.numbers.orderNo || '';
+      document.getElementById('input_no_acknowledgment').value = this.data.numbers.acknowledgmentNo || '';
+      document.getElementById('input_no_delivery').value = this.data.numbers.deliveryNo || '';
+      document.getElementById('input_no_invoice').value = this.data.numbers.invoiceNo || '';
+      document.getElementById('input_no_receipt').value = this.data.numbers.receiptNo || '';
+
+      this.renderItemFormRows();
+    }
+
+    // 明細フォーム行の再構築
+    renderItemFormRows() {
+      let container = document.getElementById('itemFormContainer');
+      let html = '';
+      for (let i = 0; i < this.data.items.length; i++) {
+        let item = this.data.items[i];
+        html += '<tr>' +
+          '<td><input type="text" class="item-name" value="' + item.name + '" oninput="app.updateFromForm()"></td>' +
+          '<td><input type="number" class="item-qty" value="' + item.qty + '" oninput="app.updateFromForm()"></td>' +
+          '<td><input type="text" class="item-unit" value="' + item.unit + '" oninput="app.updateFromForm()"></td>' +
+          '<td><input type="number" class="item-price" value="' + item.price + '" oninput="app.updateFromForm()"></td>' +
+          '<td><button class="action-btn remove" onclick="app.removeItemRow(' + i + ')">×</button></td>' +
+          '</tr>';
+      }
+      container.innerHTML = html;
+    }
+
+    // 明細行追加
+    addItemRow() {
+      this.data.items.push({ name: "新規項目", qty: 1, unit: "個", price: 0 });
+      this.renderItemFormRows();
+      this.render();
+    }
+
+    // 明細行削除
+    removeItemRow(index) {
+      this.data.items.splice(index, 1);
+      this.renderItemFormRows();
+      this.render();
+    }
+
+    // タブ切り替え処理
+    switchTab(tabType, event) {
+      this.currentTab = tabType;
+      let buttons = document.querySelectorAll('.tab-btn');
+      for (let i = 0; i < buttons.length; i++) {
+        buttons[i].classList.remove('active');
+      }
+      if (event && event.target) {
+        event.target.classList.add('active');
+      }
+      this.render();
+    }
+
+    // 合計金額の計算
+    calculateTotals() {
+      let subtotal = 0;
+      for (let i = 0; i < this.data.items.length; i++) {
+        let item = this.data.items[i];
+        subtotal += item.qty * item.price;
+      }
+      let tax = Math.floor(subtotal * 0.1);
+      let total = subtotal + tax;
+      return { subtotal: subtotal, tax: tax, total: total };
+    }
+
+    // 振込先情報のHTML組み立て用ヘルパー
+    getBankInfoHtml(bank) {
+      let details = "";
+      if (bank.symbolNumber) {
+        details += "記号・番号: " + bank.symbolNumber + "<br>";
+      }
+      if (bank.bankType || bank.branchNumber || bank.accountNumber) {
+        details += "口座情報: " + (bank.bankType || '') + " " + (bank.branchNumber || '') + " " + (bank.accountNumber || '') + "<br>";
+      }
+      return "銀行名/支店名: " + (bank.bankName || '') + "<br>" +
+        details +
+        "口座名義: " + (bank.accountName || '') + "<br>" +
+        "お振込手数料は御社ご負担にてお願い致します。";
+    }
+
+    // ドキュメント描画処理
+    render() {
+      let totals = this.calculateTotals();
+      let bank = this.data.bank || {};
+      let title = "";
+      let metaHtml = "";
+      let otherInfoHtml = "";
+
+      if (this.currentTab === 'quotation') {
+        title = "御 見 積 書 (Quotation)";
+        metaHtml = "見積日: " + this.data.dates.quotation + "<br>見積No: " + this.data.numbers.quotationNo;
+        otherInfoHtml = "<h3>お支払い・振込先</h3>" +
+          "<p>" + this.getBankInfoHtml(bank) + "</p>";
+      } else if (this.currentTab === 'order') {
+        title = "発 注 書 (注文書)";
+        metaHtml = "注文日: " + this.data.dates.order + "<br>注文No: " + this.data.numbers.orderNo + "<br>見積No: " + this.data.numbers.quotationNo;
+        otherInfoHtml = "<h3>備考</h3>" +
+          "<p>納期: 2026-11-02<br>" +
+          "納品場所・納品方法: オンライン納品（メール添付）<br>" +
+          "支払条件・支払期限: 月末締め翌月末払い</p>";
+      } else if (this.currentTab === 'acknowledgment') {
+        title = "注文請書";
+        metaHtml = "請書発行日: " + this.data.dates.acknowledgment + "<br>請書No: " + this.data.numbers.acknowledgmentNo + "<br>注文No: " + this.data.numbers.orderNo;
+        otherInfoHtml = "<h3>備考</h3>" +
+          "<p>納期: 2026-11-02 指定通り承りました。<br>" +
+          "納品場所・納品方法: オンライン納品<br>" +
+          "支払条件・支払期限: 月末締め翌月末払い</p>";
+      } else if (this.currentTab === 'delivery') {
+        title = "納 品 書";
+        metaHtml = "納品日: " + this.data.dates.delivery + "<br>納品No: " + this.data.numbers.deliveryNo + "<br>請書No: " + this.data.numbers.acknowledgmentNo;
+        otherInfoHtml = "<p><strong>下記の通り納品いたします。</strong></p>";
+      } else if (this.currentTab === 'invoice') {
+        title = "御 請 求 書";
+        metaHtml = "請求日: " + this.data.dates.invoice + "<br>請求No: " + this.data.numbers.invoiceNo + "<br>納品No: " + this.data.numbers.deliveryNo;
+        otherInfoHtml = "<h3>お支払い方法 (銀行振り込み)</h3>" +
+          "<p>下記口座へのお振込みをお願いいたします。<br>" +
+          "お支払い期限: 2026-11-30<br>" +
+          this.getBankInfoHtml(bank) + "</p>" +
+          "<p>" + this.data.buyerName + " 様へ、下記の通りご請求申し上げます。</p>";
+      } else if (this.currentTab === 'receipt') {
+        title = "領 収 書";
+        metaHtml = "発行日: " + this.data.dates.receipt + "<br>領収No: " + this.data.numbers.receiptNo + "<br>請求No: " + this.data.numbers.invoiceNo;
+        otherInfoHtml = "<p><strong>下記、正に領収いたしました。</strong></p>" +
+          "<p>件名：Webデザインおよびイラスト制作費一式<br>" +
+          "入金日：" + this.data.dates.receipt + "<br>" +
+          "繰越金額：¥0</p>";
+      }
+
+      let itemsHtml = "";
+      for (let i = 0; i < this.data.items.length; i++) {
+        let item = this.data.items[i];
+        let lineAmount = item.qty * item.price;
+        itemsHtml += "<tr>" +
+          "<td>" + item.name + "</td>" +
+          "<td class='text-right'>" + item.qty + "</td>" +
+          "<td>" + item.unit + "</td>" +
+          "<td class='text-right'>¥" + item.price.toLocaleString() + "</td>" +
+          "<td class='text-right'>¥" + lineAmount.toLocaleString() + "</td>" +
+          "</tr>";
+      }
+
+      let html = '<h2 class="doc-title">' + title + '</h2>' +
+        '<div class="doc-meta">' + metaHtml + '</div>' +
+        '<hr>' +
+        '<div class="info-section">' +
+        '<div class="info-box">' +
+        '<h3>お客様情報</h3>' +
+        '<p><strong>' + this.data.buyerName + '</strong><br>Mail: ' + this.data.buyerMail + '</p>' +
+        '</div>' +
+        '<div class="info-box">' +
+        '<h3>自社情報</h3>' +
+        '<p><strong>' + this.data.sellerName + '</strong><br>住所: ' + this.data.sellerAddress + '<br>TEL: ' + this.data.sellerTel + '<br>Mail: ' + this.data.sellerMail + '</p>' +
+        '</div>' +
+        '</div>' +
+        '<hr>' +
+        '<div style="margin-bottom: 20px;">' + otherInfoHtml + '</div>' +
+        '<h3>明細</h3>' +
+        '<table class="preview-table">' +
+        '<thead>' +
+        '<tr><th>品名</th><th class="text-right" style="width: 60px;">数量</th><th style="width: 50px;">単位</th><th class="text-right" style="width: 100px;">単価</th><th class="text-right" style="width: 120px;">金額</th></tr>' +
+        '</thead>' +
+        '<tbody>' + itemsHtml + '</tbody>' +
+        '</table>' +
+        '<div style="float: right; width: 300px; margin-top: 10px;">' +
+        '<table class="preview-table">' +
+        '<tr><td>小計</td><td class="text-right">¥' + totals.subtotal.toLocaleString() + '</td></tr>' +
+        '<tr><td>消費税(10%)</td><td class="text-right">¥' + totals.tax.toLocaleString() + '</td></tr>' +
+        '<tr style="font-weight: bold; background: #eef2f5;"><td>合計金額(税込)</td><td class="text-right">¥' + totals.total.toLocaleString() + '</td></tr>' +
+        '</table>' +
+        '</div>' +
+        '<div style="clear: both;"></div>';
+
+      document.getElementById('documentPreview').innerHTML = html;
+    }
+  }
+
+  // アプリケーション初期化
+  const app = new TransactionDocumentManager();
+  app.syncFormFromData();
+  app.render();
+</script>
+
+</body>
+</html>
